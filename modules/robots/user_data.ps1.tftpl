@@ -1,0 +1,50 @@
+<powershell>
+# First-boot bootstrap of an unattended UiPath robot.
+# 1. Read the machine template credentials from Secrets Manager (instance role, no key on disk).
+# 2. Install the Robot in service mode with the UiPath Platform Installer.
+# 3. Connect it to Orchestrator with client credentials.
+# The temporary config file holding the secret is always deleted.
+
+$ErrorActionPreference = "Stop"
+Start-Transcript -Path "C:\ProgramData\uipath-bootstrap.log" -Append
+$configPath = "C:\ProgramData\platformConfig.json"
+
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+    Write-Output "Reading Orchestrator credentials from Secrets Manager"
+    $secret = (Get-SECSecretValue -SecretId "${secret_arn}" -Region "${region}").SecretString | ConvertFrom-Json
+
+    Write-Output "Downloading the UiPath Platform Installer"
+    $installer = "C:\ProgramData\UiPathPlatform.msi"
+    Invoke-WebRequest -Uri "${installer_url}" -OutFile $installer -UseBasicParsing
+
+    $config = @{
+        Packages = @(
+            @{
+                PackageName      = "Robot"
+                InstallRequested = $true
+                Parameters       = @{
+                    REGISTER_ROBOT_SERVICE     = "true"
+                    SERVICE_URL                = $secret.orchestrator_url
+                    ORCHESTRATOR_CLIENT_ID     = $secret.client_id
+                    ORCHESTRATOR_CLIENT_SECRET = $secret.client_secret
+                }
+            }
+        )
+    }
+    $config | ConvertTo-Json -Depth 6 | Set-Content -Path $configPath -Encoding ASCII
+
+    Write-Output "Installing the Robot (service mode) and connecting it to Orchestrator"
+    $arguments = "/i `"$installer`" PLATFORM_CONFIGURATION_FILE=`"$configPath`" TELEMETRY_ENABLED=0 /qn /L*v C:\ProgramData\uipath-install.log"
+    $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -PassThru
+    Write-Output "msiexec exit code: $($process.ExitCode)"
+}
+catch {
+    Write-Output "Bootstrap failed: $_"
+}
+finally {
+    Remove-Item -Path $configPath -Force -ErrorAction SilentlyContinue
+    Stop-Transcript
+}
+</powershell>

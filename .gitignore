@@ -27,3 +27,7 @@ Thumbs.db
 
 # Backend settings (account-specific)
 backend.hcl
+
+# Never commit credentials
+secret*.txt
+*secret*.json

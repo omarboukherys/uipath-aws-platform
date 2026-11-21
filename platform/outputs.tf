@@ -17,3 +17,7 @@ output "private_subnet_ids" {
 output "data_subnet_ids" {
   value = module.network.data_subnet_ids
 }
+
+output "robots_autoscaling_group" {
+  value = module.robots.autoscaling_group_name
+}

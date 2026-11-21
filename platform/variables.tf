@@ -24,3 +24,20 @@ variable "enable_interface_endpoints" {
   type        = bool
   default     = false
 }
+
+variable "robot_count" {
+  description = "Number of robot VMs. Keep 0 outside working sessions."
+  type        = number
+  default     = 0
+}
+
+variable "robot_instance_type" {
+  type    = string
+  default = "t3.medium"
+}
+
+variable "orchestrator_secret_name" {
+  description = "Secrets Manager secret created out of band (never stored in Terraform state)."
+  type        = string
+  default     = "uipath/robot-machine-template"
+}
