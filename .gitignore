@@ -24,3 +24,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Backend settings (account-specific)
+backend.hcl
