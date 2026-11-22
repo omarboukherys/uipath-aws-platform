@@ -3,7 +3,7 @@
 # 1. Read the machine template credentials from Secrets Manager (instance role, no key on disk).
 # 2. Install the Robot in service mode with the UiPath Platform Installer.
 # 3. Connect it to Orchestrator with client credentials.
-# The temporary config file holding the secret is always deleted.
+# The config file holding the secret, and the copy the installer keeps in %TEMP%, are always deleted.
 
 $ErrorActionPreference = "Stop"
 Start-Transcript -Path "C:\ProgramData\uipath-bootstrap.log" -Append
@@ -19,13 +19,19 @@ try {
     $installer = "C:\ProgramData\UiPathPlatform.msi"
     Invoke-WebRequest -Uri "${installer_url}" -OutFile $installer -UseBasicParsing
 
+    # Robot requires Runtimes: required products are not added automatically.
     $config = @{
         Packages = @(
+            @{
+                PackageName      = "Runtimes"
+                InstallRequested = $true
+                Parameters       = @{}
+            },
             @{
                 PackageName      = "Robot"
                 InstallRequested = $true
                 Parameters       = @{
-                    REGISTER_ROBOT_SERVICE     = "true"
+                    REGISTER_ROBOT_SERVICE     = "True"
                     SERVICE_URL                = $secret.orchestrator_url
                     ORCHESTRATOR_CLIENT_ID     = $secret.client_id
                     ORCHESTRATOR_CLIENT_SECRET = $secret.client_secret
@@ -45,6 +51,7 @@ catch {
 }
 finally {
     Remove-Item -Path $configPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "$env:TEMP\UiPathConnected\platformConfiguration_*.json" -Force -ErrorAction SilentlyContinue
     Stop-Transcript
 }
 </powershell>

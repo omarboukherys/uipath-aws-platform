@@ -137,9 +137,20 @@ resource "aws_autoscaling_group" "robot" {
   vpc_zone_identifier = var.subnet_ids
   health_check_type   = "EC2"
 
+  # Pin the exact version: with "$Latest" Terraform sees no change on the group and the
+  # instance refresh below is never triggered.
   launch_template {
     id      = aws_launch_template.robot.id
-    version = "$Latest"
+    version = aws_launch_template.robot.latest_version
+  }
+
+  # A new launch template version (AMI, bootstrap script) replaces the robots automatically.
+  instance_refresh {
+    strategy = "Rolling"
+
+    preferences {
+      min_healthy_percentage = 0
+    }
   }
 
   lifecycle {

@@ -12,7 +12,8 @@ Outbound: 443 (Automation Cloud, AWS APIs) and 80 (certificate revocation checks
 ## 3. Credentials never in code or Terraform state
 The machine template client ID and secret live in Secrets Manager, created with the AWS CLI.
 Terraform only references the secret by name. The instance role can read this single secret.
-The installer config file holding the secret is deleted at the end of the bootstrap.
+The installer config file holding the secret is deleted at the end of the bootstrap, together with
+the copy the UiPath Platform Installer keeps under `%TEMP%\UiPathConnected\`.
 
 ## 4. NAT Gateway vs interface endpoints
 Robots must reach UiPath Automation Cloud, so they need internet egress anyway: a NAT Gateway.
@@ -25,3 +26,8 @@ Production: one NAT Gateway per AZ.
 The robot account has no Windows credentials yet, so it runs background processes only.
 Foreground (UI) automations need a local Windows user created at boot and its credentials in
 Orchestrator (`.\username` syntax works across machines created from the same template).
+
+## 6. Robot images are replaced, never patched in place
+The Auto Scaling group uses the latest launch template version with an instance refresh: changing the
+AMI or the bootstrap script rolls the robots. Lab setting: min healthy 0 %. Production: keep capacity
+(min healthy 100 %, max healthy 200 %) and drain running jobs first.
